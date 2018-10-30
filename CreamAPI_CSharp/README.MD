@@ -1,4 +1,4 @@
-﻿[LAST CHANGES]
+[LAST CHANGES]
 
 [10/10/18]
 Tout marche à l'heure actuelle. 
