@@ -19,7 +19,7 @@ namespace CreamAPI_CSharp
                 // The 3 following line is needed to bypass some check against botting on website (Error 403 if these line don't exist)
                 request.Method = "GET";
                 request.Accept = "text/html";
-                request.UserAgent = "Mozilla/4.0 (compatible; MSIE 7.0; Windows NT 6.1; WOW64; Trident/6.0;)";
+                request.UserAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/71.0.3578.20 Safari/537.36"; //CHANGE CA SI JAMAIS CA PLANTE SANS RAISON --"
                 response = (HttpWebResponse)await request.GetResponseAsync();
                 string sourcePage;
 

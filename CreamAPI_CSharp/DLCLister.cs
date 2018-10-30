@@ -10,36 +10,22 @@ namespace CreamAPI_CSharp
 {
     public partial class DLCLister : Form
     {
-        private byte GetSteamPresence(string gamePath)
+        public DLCLister(int appID)
         {
-            ///<summary>
-            ///This whole part is here to be able to know
-            ///which version of SteamAPI is present (if it's x64 or not, and
-            ///both or only one.
-            ///
-            ///This allow to copy only required file. And allow me to get easier
-            ///the presence of steam_api.dll
-            ///
-            /// If output value is 1: only steam_api.dll
-            /// Output value is 2: only steam_api64.dll
-            /// Output value is 3: there is both
-            /// 0 : nothing
-            ///</summary>
-            bool steamapidllExist = File.Exists(gamePath + "\\steam_api.dll");
-            bool steamapi64dllExist = File.Exists(gamePath + "\\steam_api64.dll");
+            InitializeComponent();
+            richTextBox1.AppendText("Requesting DLC for AppID: ");
+            richTextBox1.AppendText(appID.ToString(), Color.White);
+            richTextBox1.AppendText(Environment.NewLine);
 
-            byte steamApiPresent = 0;
-            if (steamapidllExist)
+            GetDLCForSelectedAppIDAsync(appID);
+        }
+
+        private void CheckEnter(object sender, System.Windows.Forms.KeyPressEventArgs e)
+        {
+            if (e.KeyChar == (char)13)
             {
-                steamApiPresent += 1;
+                Application.Exit();
             }
-
-            if (steamapi64dllExist)
-            {
-                steamApiPresent += 2;
-            }
-
-            return steamApiPresent;
         }
 
         private async void GetDLCForSelectedAppIDAsync(int appID)
@@ -93,104 +79,143 @@ namespace CreamAPI_CSharp
                     richTextBox1.AppendText("SteamDB.info have issue with 50+ DLCs, it's due to Steam API limitation. You should " +
                         "check it out on your own. More info will soon be found by looking on git page and README. But not know.", Color.Yellow);
                 }
-                richTextBox1.AppendText(Environment.NewLine);
-                richTextBox1.AppendText("The file will be saved on: ");
-                string gameDir;
-                byte steam_api = 0;
-                if (Program.noGame)
+                bool justShowing = false;
+                if (MessageBox.Show("Would you like to patch the game?", "Sure about patching?", MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes)
                 {
-                    gameDir = Environment.CurrentDirectory.ToString() + "\\" + GameSelecForm.gameName + "\\";
-                    if (!(Directory.Exists(gameDir)))
-                    {
-                        Directory.CreateDirectory(gameDir);
-                    }
+                    justShowing = false;
                 }
                 else
                 {
-                    gameDir = Program.gameDir + "\\";
-                    steam_api = GetSteamPresence(gameDir);
-                    if (steam_api == 0)
+                    justShowing = true;
+                }
+
+                if (!justShowing)
+                {
+                    richTextBox1.AppendText(Environment.NewLine);
+                    richTextBox1.AppendText("The file will be saved on: ");
+                    string gameDir;
+                    byte steam_api = 0;
+                    if (Program.noGame)
                     {
-                        OpenFileDialog getSteamApiDllFile = new OpenFileDialog
+                        gameDir = Environment.CurrentDirectory.ToString() + "\\" + GameSelecForm.gameName + "\\";
+                        if (!(Directory.Exists(gameDir)))
                         {
-                            InitialDirectory = gameDir,
-                            Filter = "steam_api(64).dll |steam_api.dll; steam_api64.dll"
-                        };
-                        if (getSteamApiDllFile.ShowDialog() == DialogResult.OK)
-                        {
-                            gameDir = getSteamApiDllFile.FileName.Replace(getSteamApiDllFile.SafeFileName, "");
+                            Directory.CreateDirectory(gameDir);
                         }
                     }
-                }
-                richTextBox1.AppendText(gameDir, Color.Yellow);
-                string capiFilesDir = Environment.CurrentDirectory + "\\CreamAPI_" + Program.capiVersion + "\\";
-                if (!Program.noGame)
-                {
+                    else
+                    {
+                        gameDir = Program.gameDir + "\\";
+                        steam_api = GetSteamPresence(gameDir);
+                        if (steam_api == 0)
+                        {
+                            OpenFileDialog getSteamApiDllFile = new OpenFileDialog
+                            {
+                                InitialDirectory = gameDir,
+                                Filter = "steam_api(64).dll |steam_api.dll; steam_api64.dll"
+                            };
+                            if (getSteamApiDllFile.ShowDialog() == DialogResult.OK)
+                            {
+                                gameDir = getSteamApiDllFile.FileName.Replace(getSteamApiDllFile.SafeFileName, "");
+                            }
+                            else
+                            {
+                                MessageBox.Show("You're dumb!", "Stupid men ...", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                                Application.Exit();
+                            }
+                            steam_api = GetSteamPresence(gameDir);
+                        }
+                    }
+                    richTextBox1.AppendText(gameDir, Color.Yellow);
+                    string capiFilesDir = Environment.CurrentDirectory + "\\CreamAPI_" + Program.capiVersion + "\\";
+                    if (!Program.noGame)
+                    {
+                        if (steam_api == 1)
+                        {
+                            File.Move(gameDir + "steam_api.dll", gameDir + "steam_api_o.dll");
+                        }
+
+                        if (steam_api == 2)
+                        {
+                            File.Move(gameDir + "steam_api64.dll", gameDir + "steam_api64_o.dll");
+                        }
+
+                        if (steam_api == 3)
+                        {
+                            File.Move(gameDir + "steam_api.dll", gameDir + "steam_api_o.dll");
+                            File.Move(gameDir + "steam_api64.dll", gameDir + "steam_api64_o.dll");
+                        }
+                    }
                     if (steam_api == 1)
                     {
-                        File.Move(gameDir + "steam_api.dll", gameDir + "steam_api_o.dll");
+                        File.Copy(capiFilesDir + "steam_api.dll", gameDir + "steam_api.dll");
                     }
 
                     if (steam_api == 2)
                     {
-                        File.Move(gameDir + "steam_api64.dll", gameDir + "steam_api64_o.dll");
+                        File.Copy(capiFilesDir + "steam_api64.dll", gameDir + "steam_api64.dll");
                     }
 
                     if (steam_api == 3)
                     {
-                        File.Move(gameDir + "steam_api.dll", gameDir + "steam_api_o.dll");
-                        File.Move(gameDir + "steam_api64.dll", gameDir + "steam_api64_o.dll");
+                        File.Copy(capiFilesDir + "steam_api.dll", gameDir + "steam_api.dll");
+                        File.Copy(capiFilesDir + "steam_api64.dll", gameDir + "steam_api64.dll");
                     }
-                }
-                if (steam_api == 1)
-                {
-                    File.Copy(capiFilesDir + "steam_api.dll", gameDir + "steam_api.dll");
-                }
+                    File.Copy(capiFilesDir + "cream_api.ini", gameDir + "cream_api.ini");
+                    CApiFileGest cApiFileGest = new CApiFileGest();
+                    cApiFileGest.CApiIniConfig(gameDir + "cream_api.ini");
+                    cApiFileGest.CApiDlcWriter(gameDir + "cream_api.ini", appID, tableDLC);
+                    richTextBox1.AppendText(Environment.NewLine);
+                    richTextBox1.AppendText(Environment.NewLine);
 
-                if (steam_api == 2)
-                {
-                    File.Copy(capiFilesDir + "steam_api64.dll", gameDir + "steam_api64.dll");
-                }
+                    /*  ADD XML WRITING
+                     *  TO BE ABLE TO SAVE
+                     *  PATCHED GAMES
+                     */
 
-                if (steam_api == 3)
-                {
-                    File.Copy(capiFilesDir + "steam_api.dll", gameDir + "steam_api.dll");
-                    File.Copy(capiFilesDir + "steam_api64.dll", gameDir + "steam_api64.dll");
+                    richTextBox1.AppendText("The game is now patched!", Color.Gray);
+                    richTextBox1.AppendText(Environment.NewLine);
+                    richTextBox1.AppendText("You can run it directly from Steam, or via exe's file.\n", Color.Gray);
+                    richTextBox1.AppendText("Keep in mind this patch isn't universal, so it might not work\n", Color.Gray);
+                    richTextBox1.AppendText("With various game.\n" +
+                        "Have fun.", Color.Gray);
                 }
-                File.Copy(capiFilesDir + "cream_api.ini", gameDir + "cream_api.ini");
-                CApiFileGest cApiFileGest = new CApiFileGest();
-                cApiFileGest.CApiIniConfig(gameDir + "cream_api.ini");
-                cApiFileGest.CApiDlcWriter(gameDir + "cream_api.ini", appID, tableDLC);
-                richTextBox1.AppendText(Environment.NewLine);
-                richTextBox1.AppendText(Environment.NewLine);
-                richTextBox1.AppendText("The game is now patched!", Color.Gray);
-                richTextBox1.AppendText(Environment.NewLine);
-                richTextBox1.AppendText("You can run it directly from Steam, or via exe's file.\n", Color.Gray);
-                richTextBox1.AppendText("Keep in mind this patch isn't universal, so it might not work\n", Color.Gray);
-                richTextBox1.AppendText("With various game.\n" +
-                    "Have fun.", Color.Gray);
                 richTextBox1.AppendText(Environment.NewLine);
                 richTextBox1.AppendText("BTw, press {enter} to leave.", Color.Gray);
                 Task.Factory.StartNew(() => richTextBox1.KeyPress += new KeyPressEventHandler(CheckEnter)).Wait(TimeSpan.FromSeconds(25.0));
             }
         }
 
-        private void CheckEnter(object sender, System.Windows.Forms.KeyPressEventArgs e)
+        private byte GetSteamPresence(string gamePath)
         {
-            if (e.KeyChar == (char)13)
+            ///<summary>
+            ///This whole part is here to be able to know
+            ///which version of SteamAPI is present (if it's x64 or not, and
+            ///both or only one.
+            ///
+            ///This allow to copy only required file. And allow me to get easier
+            ///the presence of steam_api.dll
+            ///
+            /// If output value is 1: only steam_api.dll
+            /// Output value is 2: only steam_api64.dll
+            /// Output value is 3: there is both
+            /// 0 : nothing
+            ///</summary>
+            bool steamapidllExist = File.Exists(gamePath + "\\steam_api.dll");
+            bool steamapi64dllExist = File.Exists(gamePath + "\\steam_api64.dll");
+
+            byte steamApiPresent = 0;
+            if (steamapidllExist)
             {
-                Application.Exit();
+                steamApiPresent += 1;
             }
-        }
 
-        public DLCLister(int appID)
-        {
-            InitializeComponent();
-            richTextBox1.AppendText("Requesting DLC for AppID: ");
-            richTextBox1.AppendText(appID.ToString(), Color.White);
-            richTextBox1.AppendText(Environment.NewLine);
+            if (steamapi64dllExist)
+            {
+                steamApiPresent += 2;
+            }
 
-            GetDLCForSelectedAppIDAsync(appID);
+            return steamApiPresent;
         }
     }
 }

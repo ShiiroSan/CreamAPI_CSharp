@@ -8,19 +8,25 @@ namespace CreamAPI_CSharp
 {
     internal class CApiFileGest
     {
+        private FileIniDataParser capiParser = new FileIniDataParser();
+
         public void CApiDlcWriter(string capiIniFilePath, int appID, List<List<string>> DLCList)
         {
-            IniFile CapiINI = new IniFile(capiIniFilePath);
-            CapiINI.Write("appid", appID.ToString(), "steam");
+            capiParser.Parser.Configuration.CommentString = ";";
+            IniData data = capiParser.ReadFile(capiIniFilePath);
+            data["steam"]["appid"] = appID.ToString();
+            //IniFile CapiINI = new IniFile(capiIniFilePath);
+            //CapiINI.Write("appid", appID.ToString(), "steam");
             for (int i = 0; i < DLCList.Count; i++)
             {
-                CapiINI.Write(DLCList[i][0], DLCList[i][1], "dlc");
+                data["dlc"][DLCList[i][0]] = DLCList[i][1];
+                //CapiINI.Write(DLCList[i][0], DLCList[i][1], "dlc");
             }
+            capiParser.WriteFile(capiIniFilePath, data);
         }
 
         public void CApiIniConfig(string capiIniFilePath)
         {
-            FileStream fileHandle = File.Open(capiIniFilePath, FileMode.Open, FileAccess.ReadWrite, FileShare.ReadWrite);
             string caFileConfig = "caconfig.ini";
             if (File.Exists("caconfig.ini"))
             {
@@ -70,8 +76,7 @@ namespace CreamAPI_CSharp
                 }
                 bool bWrapperMode = bool.Parse(sWrapperMode);
 
-                fileHandle.Close();
-                FileIniDataParser capiParser = new FileIniDataParser();
+                //fileHandle.Close();
                 IniData capiData = capiParser.ReadFile(capiIniFilePath);
                 if (!(sLangCfg == "English"))
                 {
@@ -95,15 +100,22 @@ namespace CreamAPI_CSharp
 
                 capiParser.WriteFile(capiIniFilePath, capiData);
             }
+            else
+            {
+                uncommentLine(capiIniFilePath, ";language");
+                IniData capiData = capiParser.ReadFile(capiIniFilePath);
+                capiData["steam"]["language"] = Regex.Match(System.Globalization.CultureInfo.CurrentCulture.EnglishName.ToLower(), @"([a-z]+)\s").Value;
+                capiParser.WriteFile(capiIniFilePath, capiData);
+            }
         }
 
         private void uncommentLine(string file, string toUncomment)
         {
-            FileStream fileHandle = File.Open(file, FileMode.Open, FileAccess.ReadWrite, FileShare.ReadWrite);
+            string oFileRead = File.ReadAllText(file);
             RegexOptions options = RegexOptions.Multiline;
 
             Regex regex = new Regex(toUncomment, options);
-            string result = regex.Replace(fileHandle.ToString(), toUncomment.Remove(0, 1));
+            string result = regex.Replace(oFileRead, toUncomment.Remove(0, 1));
             File.WriteAllText(file, result);
         }
     }
