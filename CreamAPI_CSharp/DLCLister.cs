@@ -5,6 +5,7 @@ using System.Drawing;
 using System.IO;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+using System.Xml.Linq;
 
 namespace CreamAPI_CSharp
 {
@@ -17,7 +18,7 @@ namespace CreamAPI_CSharp
             richTextBox1.AppendText(appID.ToString(), Color.White);
             richTextBox1.AppendText(Environment.NewLine);
 
-            GetDLCForSelectedAppIDAsync(appID);
+            WriteAndPatch(appID);
         }
 
         private void CheckEnter(object sender, System.Windows.Forms.KeyPressEventArgs e)
@@ -28,7 +29,27 @@ namespace CreamAPI_CSharp
             }
         }
 
-        private async void GetDLCForSelectedAppIDAsync(int appID)
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="appID">Appid of the game to get DLC of</param>
+        /// <param name="statusCode">Can have different return value:
+        /// - isok              means everything is cool man
+        /// - tableDLCisnull    name speak by itself</param>
+        /// <returns>A list of list of string containing DLC value and their names.</returns>
+        private List<List<string>> GetDLCForSelectedAppIDAsync(int appID, ref string statusCode)
+        {
+            statusCode = "isok";
+            string steamDBURLDlc = "https://steamdb.info/app/" + appID.ToString() + "/dlc/";
+            List<List<string>> tableDLC = WebGestion.GetTableFromPages(steamDBURLDlc, "//*[@id=\"dlc\"]/div/table"); //07.07.19 changed //*[@id="dlc"]/table to //*[@id="dlc"]/div/table
+            if (tableDLC == null)
+            {
+                statusCode = "tableDLCisnull";
+            }
+            return tableDLC;
+        }
+
+        private void WriteAndPatch(int appID)
         {
             richTextBox1.AppendText(Environment.NewLine);
             richTextBox1.AppendText("Searching DLC for: ");
@@ -42,8 +63,9 @@ namespace CreamAPI_CSharp
             richTextBox1.AppendText(Environment.NewLine);
             richTextBox1.AppendText(Environment.NewLine);
             richTextBox1.AppendText("Gathering DLCs informations. This can take some time depending on your network connection and amount of DLC.");
-            List<List<string>> tableDLC = await WebGestion.getTableFromPagesAsync(steamDBURLDlc, "//*[@id=\"dlc\"]/table"); //TODO: Avoid case where there is no DLC.
-            if (tableDLC == null)
+            string statusCode = "";
+            var tableDLC = GetDLCForSelectedAppIDAsync(appID, ref statusCode);
+            if (statusCode == "tableDLCisnull")
             {
                 richTextBox1.AppendText(Environment.NewLine);
                 richTextBox1.AppendText(Environment.NewLine);
@@ -128,50 +150,100 @@ namespace CreamAPI_CSharp
                     }
                     richTextBox1.AppendText(gameDir, Color.Yellow);
                     string capiFilesDir = Environment.CurrentDirectory + "\\CreamAPI_" + Program.capiVersion + "\\";
+                    bool isCrackAlreadyPresent = false;
+                    if (File.Exists(gameDir + "cream_api.ini"))
+                    {
+                        isCrackAlreadyPresent = true;
+                    }
                     if (!Program.noGame)
+                    {
+                        if (!isCrackAlreadyPresent)
+                        {
+                            if (steam_api == 1)
+                            {
+                                File.Move(gameDir + "steam_api.dll", gameDir + "steam_api_o.dll");
+                            }
+
+                            if (steam_api == 2)
+                            {
+                                File.Move(gameDir + "steam_api64.dll", gameDir + "steam_api64_o.dll");
+                            }
+
+                            if (steam_api == 3)
+                            {
+                                File.Move(gameDir + "steam_api.dll", gameDir + "steam_api_o.dll");
+                                File.Move(gameDir + "steam_api64.dll", gameDir + "steam_api64_o.dll");
+                            }
+                        }
+                    }
+                    if (!isCrackAlreadyPresent)
                     {
                         if (steam_api == 1)
                         {
-                            File.Move(gameDir + "steam_api.dll", gameDir + "steam_api_o.dll");
+                            File.Copy(capiFilesDir + "steam_api.dll", gameDir + "steam_api.dll");
                         }
 
                         if (steam_api == 2)
                         {
-                            File.Move(gameDir + "steam_api64.dll", gameDir + "steam_api64_o.dll");
+                            File.Copy(capiFilesDir + "steam_api64.dll", gameDir + "steam_api64.dll");
                         }
 
                         if (steam_api == 3)
                         {
-                            File.Move(gameDir + "steam_api.dll", gameDir + "steam_api_o.dll");
-                            File.Move(gameDir + "steam_api64.dll", gameDir + "steam_api64_o.dll");
+                            File.Copy(capiFilesDir + "steam_api.dll", gameDir + "steam_api.dll");
+                            File.Copy(capiFilesDir + "steam_api64.dll", gameDir + "steam_api64.dll");
                         }
+                        File.Copy(capiFilesDir + "cream_api.ini", gameDir + "cream_api.ini");
                     }
-                    if (steam_api == 1)
-                    {
-                        File.Copy(capiFilesDir + "steam_api.dll", gameDir + "steam_api.dll");
-                    }
-
-                    if (steam_api == 2)
-                    {
-                        File.Copy(capiFilesDir + "steam_api64.dll", gameDir + "steam_api64.dll");
-                    }
-
-                    if (steam_api == 3)
-                    {
-                        File.Copy(capiFilesDir + "steam_api.dll", gameDir + "steam_api.dll");
-                        File.Copy(capiFilesDir + "steam_api64.dll", gameDir + "steam_api64.dll");
-                    }
-                    File.Copy(capiFilesDir + "cream_api.ini", gameDir + "cream_api.ini");
                     CApiFileGest cApiFileGest = new CApiFileGest();
                     cApiFileGest.CApiIniConfig(gameDir + "cream_api.ini");
                     cApiFileGest.CApiDlcWriter(gameDir + "cream_api.ini", appID, tableDLC);
                     richTextBox1.AppendText(Environment.NewLine);
                     richTextBox1.AppendText(Environment.NewLine);
 
-                    /*  ADD XML WRITING
-                     *  TO BE ABLE TO SAVE
-                     *  PATCHED GAMES
-                     */
+                    string strPathXML = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData).ToString() + "\\patchedCApiGames.xml";
+                    GamePatchSaveMgmt saveMgmt = new GamePatchSaveMgmt(strPathXML);
+
+                    List<string> lsStrreadedGame = saveMgmt.ReadAppIDXml(appID.ToString());
+                    List<string> lsStrGameInfo = new List<string>
+                    {
+                        appID.ToString(),
+                        GameSelecForm.gameName,
+                        gameDir.ToString(),
+                        tableDLC.Count.ToString()
+                    };
+                    if (lsStrreadedGame.Count == 1)
+                    {
+                        if (lsStrreadedGame[0] == "no_file")
+                        {
+                            XDocument doc = new XDocument(
+                                    new XElement("crackedgame")
+                                );
+                            doc.Save(strPathXML);
+                            bool boolWrite = saveMgmt.WriteToXML(lsStrGameInfo);
+                        }
+                        if (lsStrreadedGame[0] == "not_found")
+                        {
+                            bool boolWrite = saveMgmt.WriteToXML(lsStrGameInfo);
+                        }
+                    }
+                    else
+                    {
+                        bool hasInfoChange = false;
+                        for (int i = 0; i < lsStrreadedGame.Count; i++)
+                        {
+                            if (lsStrGameInfo[i] != lsStrreadedGame[i])
+                            {
+                                hasInfoChange = true;
+                                break;
+                            }
+                        }
+                        if (hasInfoChange)
+                        {
+                            bool bgitre = saveMgmt.UpdateXMLElement(lsStrGameInfo);
+                            bgitre = saveMgmt.WriteToXML(lsStrGameInfo);
+                        }
+                    }
 
                     richTextBox1.AppendText("The game is now patched!", Color.Gray);
                     richTextBox1.AppendText(Environment.NewLine);
@@ -179,10 +251,10 @@ namespace CreamAPI_CSharp
                     richTextBox1.AppendText("Keep in mind this patch isn't universal, so it might not work\n", Color.Gray);
                     richTextBox1.AppendText("With various game.\n" +
                         "Have fun.", Color.Gray);
+                    richTextBox1.AppendText(Environment.NewLine);
+                    richTextBox1.AppendText("BTw, press {enter} to leave.", Color.Gray);
+                    Task.Factory.StartNew(() => richTextBox1.KeyPress += new KeyPressEventHandler(CheckEnter)).Wait(TimeSpan.FromSeconds(25.0));
                 }
-                richTextBox1.AppendText(Environment.NewLine);
-                richTextBox1.AppendText("BTw, press {enter} to leave.", Color.Gray);
-                Task.Factory.StartNew(() => richTextBox1.KeyPress += new KeyPressEventHandler(CheckEnter)).Wait(TimeSpan.FromSeconds(25.0));
             }
         }
 

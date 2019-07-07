@@ -33,7 +33,7 @@ namespace CreamAPI_CSharp
                 Regex regex = new Regex(pattern);
                 gameName = regex.Replace(gameName, substitution);
                 string url = $"{urlRoot}/search/?a=app&q={gameName}&type=1&category=0";
-                List<List<string>> table = await WebGestion.getTableFromPagesAsync(url);
+                List<List<string>> table = WebGestion.GetTableFromPages(url);
                 if (table == null)
                 {
                     MessageBox.Show("This game wasn't found... ", "Error!", MessageBoxButtons.OK, MessageBoxIcon.Error);

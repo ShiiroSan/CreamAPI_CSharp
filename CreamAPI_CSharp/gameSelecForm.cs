@@ -24,6 +24,7 @@ namespace CreamAPI_CSharp
             if (vs.Count == 1)
             {
                 int iAppID = int.Parse(vs[0][0]); //Add tryParse, prevent error
+                gameName = vs[0][2];
                 this.Hide();
                 (new DLCLister(iAppID)).ShowDialog();
             }

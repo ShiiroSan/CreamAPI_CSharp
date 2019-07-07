@@ -10,7 +10,7 @@ namespace CreamAPI_CSharp
 {
     public class WebGestion
     {
-        public static async Task<string> GetPageAsync(string url)
+        public static string GetPage(string url)
         {
             HttpWebRequest request = (HttpWebRequest)WebRequest.CreateHttp(url);
             HttpWebResponse response;
@@ -20,7 +20,7 @@ namespace CreamAPI_CSharp
                 request.Method = "GET";
                 request.Accept = "text/html";
                 request.UserAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/71.0.3578.20 Safari/537.36"; //CHANGE CA SI JAMAIS CA PLANTE SANS RAISON --"
-                response = (HttpWebResponse)await request.GetResponseAsync();
+                response = (HttpWebResponse)request.GetResponse();
                 string sourcePage;
 
                 using (StreamReader reader = new StreamReader(response.GetResponseStream()))
@@ -40,9 +40,9 @@ namespace CreamAPI_CSharp
             return "";
         }
 
-        public static async Task<List<List<string>>> getTableFromPagesAsync(string url, string xPath = "//table")
+        public static List<List<string>> GetTableFromPages(string url, string xPath = "//table")
         {
-            string sourcePage = await GetPageAsync(url);
+            string sourcePage = GetPage(url);
             HtmlAgilityPack.HtmlDocument doc = new HtmlAgilityPack.HtmlDocument();
             doc.LoadHtml(sourcePage);
             List<List<string>> table = null;
