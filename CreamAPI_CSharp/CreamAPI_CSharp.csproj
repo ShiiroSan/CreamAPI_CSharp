@@ -81,6 +81,7 @@
     <Compile Include="searchForm.Designer.cs">
       <DependentUpon>searchForm.cs</DependentUpon>
     </Compile>
+    <Compile Include="updateManagement.cs" />
     <Compile Include="WebGestion.cs" />
     <EmbeddedResource Include="DLCLister.resx">
       <DependentUpon>DLCLister.cs</DependentUpon>

@@ -74,7 +74,7 @@ namespace CreamAPI_CSharp
                 {
                     sWrapperMode = "False";
                 }
-                bool bWrapperMode = bool.Parse(sWrapperMode);
+                //bool bWrapperMode = bool.Parse(sWrapperMode);
 
                 //fileHandle.Close();
                 IniData capiData = capiParser.ReadFile(capiIniFilePath);

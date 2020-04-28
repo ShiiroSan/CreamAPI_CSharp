@@ -8,14 +8,10 @@ namespace CreamAPI_CSharp
 {
     internal class Program
     {
-        /// <summary>
-        /// Point d'entrée principal de l'application.
-        /// </summary>
-        ///
-        public static bool noGame = false;
+        public static bool useInstalledGame = true;
 
         public static string gameDir = "";
-        public static string capiVersion = "v3.4.1.0";
+        public static string capiVersion = "v4.3.1.0";
 
         [STAThread]
         private static void Main()
@@ -25,9 +21,7 @@ namespace CreamAPI_CSharp
             //DLCLister dlcLister = new DLCLister(440);
             //dlcLister.ShowDialog();
             string caFileConfig = "caconfig.ini";
-#pragma warning disable CS0219 // La variable est assignée mais sa valeur n'est jamais utilisée
             bool bConfigShow;
-#pragma warning restore CS0219 // La variable est assignée mais sa valeur n'est jamais utilisée
             if (File.Exists(caFileConfig))
             {
                 bConfigShow = false;
@@ -38,11 +32,14 @@ namespace CreamAPI_CSharp
                 bConfigShow = true;
             }
 
+            //updateManagement.CreamApiVersionScraper();
+            //Application.Exit();
+
             searchForm searchForm = new searchForm();
             if (MessageBox.Show("Do you want to use an installed game?", "", MessageBoxButtons.YesNo) == DialogResult.No)
             {
                 gameDir = "";
-                noGame = true;
+                useInstalledGame = false;
             }
             else
             {
@@ -73,13 +70,13 @@ namespace CreamAPI_CSharp
                         string[] ArrfullDirWGameName = gameDir.Split("\\".ToCharArray());
                         string guessGameName = ArrfullDirWGameName[ArrfullDirWGameName.Length - 1];
                         searchForm.setGameNameInputText(guessGameName);
-                        noGame = false;
+                        useInstalledGame = true;
                     }
                 }
                 else //si on sélectionne pas le jeu, on applique la procédure du noGame
                 {
                     gameDir = "";
-                    noGame = true;
+                    useInstalledGame = false;
                 }
 
                 #endregion Get Steam Path

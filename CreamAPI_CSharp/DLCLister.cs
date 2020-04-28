@@ -1,8 +1,11 @@
-﻿using System;
+﻿using IniParser;
+using IniParser.Model;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Drawing;
 using System.IO;
+using System.Linq;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using System.Xml.Linq;
@@ -64,6 +67,7 @@ namespace CreamAPI_CSharp
             richTextBox1.AppendText(Environment.NewLine);
             richTextBox1.AppendText("Gathering DLCs informations. This can take some time depending on your network connection and amount of DLC.");
             string statusCode = "";
+
             var tableDLC = GetDLCForSelectedAppIDAsync(appID, ref statusCode);
             if (statusCode == "tableDLCisnull")
             {
@@ -117,7 +121,7 @@ namespace CreamAPI_CSharp
                     richTextBox1.AppendText("The file will be saved on: ");
                     string gameDir;
                     byte steam_api = 0;
-                    if (Program.noGame)
+                    if (!Program.useInstalledGame)
                     {
                         gameDir = Environment.CurrentDirectory.ToString() + "\\" + GameSelecForm.gameName + "\\";
                         if (!(Directory.Exists(gameDir)))
@@ -152,51 +156,71 @@ namespace CreamAPI_CSharp
                     string capiFilesDir = Environment.CurrentDirectory + "\\CreamAPI_" + Program.capiVersion + "\\";
                     bool isCrackAlreadyPresent = false;
                     if (File.Exists(gameDir + "cream_api.ini"))
-                    {
                         isCrackAlreadyPresent = true;
-                    }
-                    if (!Program.noGame)
-                    {
-                        if (!isCrackAlreadyPresent)
-                        {
-                            if (steam_api == 1)
-                            {
-                                File.Move(gameDir + "steam_api.dll", gameDir + "steam_api_o.dll");
-                            }
-
-                            if (steam_api == 2)
-                            {
-                                File.Move(gameDir + "steam_api64.dll", gameDir + "steam_api64_o.dll");
-                            }
-
-                            if (steam_api == 3)
-                            {
-                                File.Move(gameDir + "steam_api.dll", gameDir + "steam_api_o.dll");
-                                File.Move(gameDir + "steam_api64.dll", gameDir + "steam_api64_o.dll");
-                            }
-                        }
-                    }
                     if (!isCrackAlreadyPresent)
                     {
                         if (steam_api == 1)
                         {
+                            if (Program.useInstalledGame)
+                                File.Move(gameDir + "steam_api.dll", gameDir + "steam_api_o.dll");
                             File.Copy(capiFilesDir + "steam_api.dll", gameDir + "steam_api.dll");
                         }
-
                         if (steam_api == 2)
                         {
+                            if (Program.useInstalledGame)
+                                File.Move(gameDir + "steam_api64.dll", gameDir + "steam_api64_o.dll");
                             File.Copy(capiFilesDir + "steam_api64.dll", gameDir + "steam_api64.dll");
                         }
-
                         if (steam_api == 3)
                         {
+                            if (Program.useInstalledGame)
+                            {
+                                File.Move(gameDir + "steam_api.dll", gameDir + "steam_api_o.dll");
+                                File.Move(gameDir + "steam_api64.dll", gameDir + "steam_api64_o.dll");
+                            }
                             File.Copy(capiFilesDir + "steam_api.dll", gameDir + "steam_api.dll");
                             File.Copy(capiFilesDir + "steam_api64.dll", gameDir + "steam_api64.dll");
                         }
                         File.Copy(capiFilesDir + "cream_api.ini", gameDir + "cream_api.ini");
                     }
+                    else
+                    {
+                        richTextBox1.AppendText(Environment.NewLine);
+                        richTextBox1.AppendText(Environment.NewLine);
+                        richTextBox1.AppendText("Existing DLCs info found!\n", Color.Yellow);
+                        FileIniDataParser capiParser = new FileIniDataParser();
+                        var temp1 = capiParser.ReadFile(gameDir + "cream_api.ini");
+                        List<KeyData> localDLCKeyData = temp1.Sections["dlc"].ToList();
+                        if (localDLCKeyData.Count == tableDLC.Count)
+                        {
+                            richTextBox1.AppendText("No new DLCs found for this game.\n", Color.Yellow);
+                            tableDLC.Clear();
+                        }
+                        else
+                        {
+                            richTextBox1.AppendText($"{localDLCKeyData.Count} DLC(s) already activated!\n", Color.Yellow);
+                            for (int i = 0; i < localDLCKeyData.Count; i++)
+                            {
+                                for (int j = 0; j < tableDLC.Count; j++)
+                                {
+                                    if ((localDLCKeyData[i].KeyName == tableDLC[j][0]) && (localDLCKeyData[i].Value == tableDLC[j][1]))
+                                        tableDLC.RemoveAt(j);
+                                }
+                            }
+                            richTextBox1.AppendText($"{tableDLC.Count} new DLC(s) will be added!\n", Color.Yellow);
+                            for (int i = 0; i < tableDLC.Count; i++)
+                            {
+                                richTextBox1.AppendText("DLC Name:  ");
+                                richTextBox1.AppendText(tableDLC[i][1], Color.White);
+                                richTextBox1.AppendText(" newly added!\n");
+                            }
+                        }
+                    }
                     CApiFileGest cApiFileGest = new CApiFileGest();
-                    cApiFileGest.CApiIniConfig(gameDir + "cream_api.ini");
+                    if (!isCrackAlreadyPresent)
+                    {
+                        cApiFileGest.CApiIniConfig(gameDir + "cream_api.ini");
+                    }
                     cApiFileGest.CApiDlcWriter(gameDir + "cream_api.ini", appID, tableDLC);
                     richTextBox1.AppendText(Environment.NewLine);
                     richTextBox1.AppendText(Environment.NewLine);
